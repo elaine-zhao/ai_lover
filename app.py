@@ -13,7 +13,19 @@ from langchain.chains import LLMChain
 from memory import love_memory
 import chainlit as cl
 from langchain.memory import ConversationSummaryMemory
+from langchain.chat_models import ChatOpenAI
+from langchain.memory.chat_message_histories.in_memory import ChatMessageHistory
+from langchain.schema import messages_from_dict, messages_to_dict, HumanMessage, AIMessage
+from langchain.memory import ConversationBufferMemory, chat_message_histories
+from langchain.chains import ConversationalRetrievalChain, ConversationChain
+from langchain import memory
+from langchain.memory.chat_message_histories import in_memory
+import json
+from typing import List
+import pickle
+import os
 
+MEMORY_CACHE_PATH = 'conversation_memory_cache.pkl'
 
 # # LLM
 # llm = OpenAI(temperature=0.3)
@@ -45,7 +57,13 @@ AI:"""
 def main():
     chat = ChatOpenAI()
     PROMPT = PromptTemplate(input_variables=["history", "input"], template=DEFAULT_TEMPLATE)
-    conversation = ConversationChain(llm=chat, prompt=PROMPT)
+
+    if os.path.exists(MEMORY_CACHE_PATH):
+        with open(MEMORY_CACHE_PATH, 'rb') as fIn:
+            memory = pickle.load(fIn)
+            conversation = ConversationChain(llm=chat, prompt=PROMPT, memory=memory)
+    else:
+        conversation = ConversationChain(llm=chat, prompt=PROMPT)
     cl.user_session.set("conversation", conversation)
 
 
@@ -71,6 +89,9 @@ async def main(message: str):
     response = conversation.run(message)
     await cl.Message(content=response).send()
 
+    # conversation_chain = conversation as ConversationChain
+    with open(MEMORY_CACHE_PATH, 'wb') as f:
+        pickle.dump(conversation.memory, f)
 
     # # Retrieve the chain from the user session
     # llm_chain = cl.user_session.get("llm_chain")  # type: LLMChain
