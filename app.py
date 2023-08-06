@@ -1,4 +1,5 @@
 from langchain import PromptTemplate, OpenAI, LLMChain
+from conversation import process_response
 import chainlit as cl
 
 template = """Question: {question}
@@ -11,6 +12,7 @@ def main():
     # Instantiate the chain for that user session
     prompt = PromptTemplate(template=template, input_variables=["question"])
     llm_chain = LLMChain(prompt=prompt, llm=OpenAI(temperature=0), verbose=True)
+    print(conversation.prompt.template)
 
     # Store the chain in the user session
     cl.user_session.set("llm_chain", llm_chain)
